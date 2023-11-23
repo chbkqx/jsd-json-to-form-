@@ -33,21 +33,22 @@ jsdType.addmore = function(name, code, dv) {
         alert("jsdType.addmore error:" + err.message)
     }
 }
-jsdType.addmore('boolean', function(returnObj, key, formDiv,value, worker) {
-    value.list = value.list||{}
+jsdType.addmore('boolean', function(returnObj, key, formDiv, value, worker) {
+    value.list = value.list || []
     worker.useName(formDiv, value)
-    let newValue = worker.getDv(key) || value.list[0] || jsdTypeDv.text
+    let newValue = worker.getDv(key) || value.list[0] || jsdTypeDv.boolean
+    //alert(newValue)
     let newElement = formDiv.createNewElement("input", {
         "type": "checkbox",
         "checked": newValue
     })
     toFormCsh("click", "checked", newElement, returnObj, key)
-})
+}, false)
 
-jsdType.addmore('color', function(returnObj, key, formDiv,value, worker) {
-value.list = value.list||{}
-        worker.useName(formDiv, value)
-        let newValue = worker.getDv(key) || value.list[0] || jsdTypeDv.text
+jsdType.addmore('color', function(returnObj, key, formDiv, value, worker) {
+    value.list = value.list || {}
+    worker.useName(formDiv, value)
+    let newValue = worker.getDv(key) || value.list[0] || jsdTypeDv.color
     let newElement = formDiv.createNewElement("input", {
         "type": "color",
         "value": newValue
@@ -56,15 +57,16 @@ value.list = value.list||{}
 })
 
 jsdType.addmore('radio', function(returnObj, key, formDiv, value, worker) {
-if(value.list==null){
-alert('jsd错误：radio没有值范围')
-return
-}
-        worker.useName(formDiv, value)
-        let dek = worker.getDv(key) || value.list[0] || jsdTypeDv.text
+    if (value.list == null) {
+        alert('jsd错误：radio没有值范围')
+        return
+    }
+    worker.useName(formDiv, value)
+    let dek = worker.getDv(key) || value.list[0] || jsdTypeDv.radio
     let newElement = formDiv.createNewElement("select", {
         "value": dek
     })
+    alert(JSON.stringify(value))
     value.list.forEach((forValue) => {
         newElement.createNewElement("option", {
             "innerHTML": forValue[0]
@@ -76,9 +78,9 @@ return
 
 jsdType.addmore('number', function(returnObj, key, formDiv, value, worker) {
     //worker.removeTitle()
-        value.list = value.list||{}
-        worker.useName(formDiv, value)
-        let dek = worker.getDv(key) || value.list[2] || jsdTypeDv.text
+    value.list = value.list || {}
+    worker.useName(formDiv, value)
+    let dek = worker.getDv(key) || value.list[2] || jsdTypeDv.number
     let newElement = formDiv.createNewElement("input", {
         type: "range",
         min: value.list[0],
@@ -106,7 +108,7 @@ jsdType.addmore('number', function(returnObj, key, formDiv, value, worker) {
 })
 jsdType.addmore('text', function(returnObj, key, formDiv, value, worker) {
     try {
-        value.list = value.list||{}
+        value.list = value.list || {}
         worker.useName(formDiv, value)
         let newValue = worker.getDv(key) || value.list[0] || jsdTypeDv.text
         let newElement = formDiv.createNewElement("input", {
@@ -117,7 +119,7 @@ jsdType.addmore('text', function(returnObj, key, formDiv, value, worker) {
     } catch (err) {
         alert("textbug error:" + err.message)
     }
-}, 'shsh')
+}, '')
 jsdType.addmore('title', function(returnObj, key, formDiv, dek, value, worker) {
     Reflect.deleteProperty(returnObj, key);
 })
@@ -135,98 +137,13 @@ function jsd(tempObj, formDiv, config, defalutObj) {
     let returnObj = new Proxy(returnObjb, proxyConfig);
     proxyConfig.set = function(target, property, value, re) {
         target[property] = value
-        if (typeof tempObj[property] == 'object' && config.omitDefaults && tempObj[property].jsdlist.dv == value) {
-            Reflect.deleteProperty(target, property);
-        }
-        return true
-    }
-    for (let key in tempObj) {
-        let worker
         try {
-            worker = {
-                useName: () => {
-                    if(tempObj[key].jsdlist.infor !== ''){
-                    formDiv.createNewElement('p', {
-                        innerHTML: tempObj[key].jsdlist.infor
-                    })
-                    }
-                },
-                getDv: () => {
-                    if (defalutObj) {
-                        return defalutObj[key]
-                    }
-                }
-            };
-        } catch (err) {
-            alert("jsd14.js worker error:" + err.message)
-        }
-        if (tempObj[key].jsdlist) {
-            //如果是一个jsd对象，那么：
-
-            try {
-                jsdType[tempObj[key].jsdlist.type](returnObj, key, formDiv, tempObj[key].jsdlist, worker);
-                if (config.createInputCallback) {
-                    config.createInputCallback(tempObj, returnObj, formDiv, key)
-                }
-            } catch (err) {
-                if (err.message == "jsdType[tempObj[key].jsdlist.type] is not a function") {
-                    alert('jsd错误：未定义的表单类型：' + tempObj[key].jsdlist.type)
-                } else {
-                    alert('jsd错误：' + err.message)
-                }
-            }
-        } else if (typeof tempObj[key] === "object" && tempObj[key] !== null) {
-            //嵌套执行jsd
-
-            let nextDiv = formDiv.createNewElement("div", {
-                'class': key
-            })
-            if (defalutObj) {
-                returnObjb[key] = jsd(tempObj[key], nextDiv, config, defalutObj[key]);
-            } else {
-                returnObjb[key] = jsd(tempObj[key], nextDiv, config);
-            }
-        } else {
-            try {
-                switch (key) {
-                    case 'jsd_class':
-                        formDiv.classList.add(tempObj[key])
-                        break;
-                    case 'jsd_setPos':
-                        formDiv = $(tempObj[key])
-                        break;
-                    case 'jsd_element':
-                        useTemp($(tempObj[key]), formDiv.createNewElement('div'))
-                        break;
-                    default:
-                        //保留数据(对于默认定义值)
-                        returnObj[key] = tempObj[key]
-                }
-            } catch (err) {
-                alert("jsd14.js jsdCommand error:" + err.message)
-            }
-        }
-    }
-
-    //自定义proxyConfig
-    if (config.customProxyConfig) {
-        proxyConfig = config.customProxyConfig
-    } else {
-        proxyConfig.set = function(target, property, value, re) {
-            target[property] = value
-            try {
-                config.setCallback(target, property, value, tempObj);
-            } catch (err) {
-                alert("设置时处理函数错误:" + err.message)
-            }
-            if (typeof tempObj[property] == 'object' && config.omitDefaults && tempObj[property].jsdlist.dv == value) {
+            /*            if(typeof tempObj[property] == 'object'&& config.omitDefaults){
+            alert('实'+JSON.stringify(tempObj[property])+tempObj[property].jsdlist.list[1]+value)
+            }*/
+            if (typeof tempObj[property] == 'object' && config.omitDefaults && tempObj[property].jsdlist.list[0] == value) {
+                //alert('其实')
                 Reflect.deleteProperty(target, property);
             }
-            return true
-        }
-    }
-    return returnObj
-}
-export {
-    jsdType, jsd, c
-}
+        } catch (err) {
+            alert("jshxhxhsbdbdhderror:" + er
